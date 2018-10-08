@@ -15,7 +15,8 @@ public class SimpleGeneticAlgorithm {
 
     private static final int populationSize = 50,
             chromSize = 50,
-            nGenerations = 50;
+            nGenerations = 50,
+            nRuns = 10;
 
     private static double mutationRate = .1;
 
@@ -33,6 +34,7 @@ public class SimpleGeneticAlgorithm {
         //mutationRate = calcMutationRate();
         //System.out.println("Pm = " + mutationRate);
 
+        for(int r = 0; r < nRuns; r++){
         for (int i = 0; i < population.length; i++) {
             int[] genes = new int[chromSize];
 
@@ -45,14 +47,14 @@ public class SimpleGeneticAlgorithm {
         for (int g = 0; g < nGenerations; g++) {
             population = calcFitness(population);
 
-            System.out.println("Parent pop best fitness = " + bestFitness(population));
+            //System.out.println("Parent pop best fitness = " + bestFitness(population));
 
             offspring = crossover();
             offspring = mutate();
 
             offspring = calcFitness(offspring);
 
-            System.out.println("Offspring pop avg fitness = " + avgFitness(offspring));
+            //System.out.println("Offspring pop avg fitness = " + avgFitness(offspring));
 
             population = selectNewPopulation();
         }
@@ -61,6 +63,7 @@ public class SimpleGeneticAlgorithm {
         System.out.println("Parent pop best fitness = " + bestFitness(population));
         System.out.println("Parent pop avg fitness = " + avgFitness(population));
         System.out.println("Parent pop sum fitness = " + sumFitness(population));
+        }
     }
 
     private static Individual[] selectNewPopulation() {
