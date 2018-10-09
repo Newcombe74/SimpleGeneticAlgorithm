@@ -216,7 +216,7 @@ public class SimpleGeneticAlgorithm {
         sb.append(',');
         sb.append("Avg Total Fitness");
         sb.append(',');
-        sb.append("First Gen to Hit GO");
+        sb.append("First Gen to Reach GO");
         sb.append('\n');
         pw.write(sb.toString());
     }
@@ -247,7 +247,7 @@ public class SimpleGeneticAlgorithm {
         sb.append(',');
         sb.append("Avg Total Fitness");
         sb.append(',');
-        sb.append("First Gen to Hit GO");
+        sb.append("First Gen to Reach GO");
         sb.append('\n');
         pw.write(sb.toString());
     }
