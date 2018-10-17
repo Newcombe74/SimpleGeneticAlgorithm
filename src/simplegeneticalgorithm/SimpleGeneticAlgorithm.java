@@ -18,12 +18,16 @@ import java.io.PrintWriter;
 public class SimpleGeneticAlgorithm {
 
     //Hyperparameters
-    private static final int POP_SIZE = 2000,
-            CHROM_SIZE = 50,
+    private static final int POP_SIZE = 100,
             N_GENS = 50,
             N_RUNS = 10,
             MUT_RES = 101,
             CRS_RES = 100;
+
+    //Task Option Indexes
+    private static final int TASK_COUNT_ONES = 1,
+            TASK_X_SQUARED = 2,
+            TASK_XY_FUNC = 3;
 
     //Test Option Indexes
     private static final int TEST_MUT = 1,
@@ -41,7 +45,10 @@ public class SimpleGeneticAlgorithm {
             RES_SUM = 2,
             RES_GEN_TO_GO = 3;
 
+    private static int chromSize = 50;
+
     //First Generation to reach Global Optimum
+    private static int globalOptimum = 0;
     private static boolean reachGO = false;
     private static int genToReachGO = N_GENS * 2;
 
@@ -60,7 +67,8 @@ public class SimpleGeneticAlgorithm {
 
     private static PrintWriter pw;
 
-    private static int selectedTestOption, percComplete = 10;
+    private static int selectedTestOption, selectedTaskOption;
+    private static int percComplete = 10;
 
     /**
      * @param args the command line arguments
@@ -73,6 +81,74 @@ public class SimpleGeneticAlgorithm {
         initMutationRates();
         initCrossoverRates();
 
+        //GET users task selection
+        Scanner scanner = new Scanner(System.in);
+        boolean inputValid = false;
+        while (!inputValid) {
+            System.out.println("Please enter the number of the task you wish to run:");
+            System.out.println(TASK_COUNT_ONES + ". Counting ones task");
+            System.out.println(TASK_X_SQUARED + ". X squared task");
+            System.out.println(TASK_XY_FUNC + ". XY function task");
+
+            selectedTaskOption = scanner.nextInt();
+
+            switch (selectedTaskOption) {
+                case TASK_COUNT_ONES:
+                    globalOptimum = 50;
+                    getTestSelection();
+                    inputValid = true;
+                    break;
+                case TASK_X_SQUARED:
+                    chromSize = 8;
+                    globalOptimum = 65025;
+                    getTestSelection();
+                    inputValid = true;
+                    break;
+                case TASK_XY_FUNC:
+                    chromSize = 10;
+                    globalOptimum = 225;
+                    getTestSelection();
+                    inputValid = true;
+                    break;
+                default:
+                    System.out.println("Input invalid");
+            }
+        }
+    }
+
+    private static void runSimpleGA(int selectionType) {
+        //SET each individuals genes to be 1 or 0 at random
+        for (int i = 0; i < population.length; i++) {
+            int[] genes = new int[chromSize];
+
+            for (int j = 0; j < genes.length; j++) {
+                genes[j] = (int) ((Math.random() * 2) % 2);
+            }
+            population[i] = new Individual(genes);
+        }
+
+        for (int g = 0; g < N_GENS; g++) {
+            population = calcFitness(population);
+
+            //Check if global optimum has been reached
+            if (bestFitness(population) == globalOptimum && reachGO == false) {
+                reachGO = true;
+                genToReachGO = g + 1;
+            }
+
+            //System.out.println("Parent pop best fitness = " + bestFitness(population));
+            offspring = crossover();
+            offspring = mutate();
+
+            offspring = calcFitness(offspring);
+
+            //System.out.println("Offspring pop avg fitness = " + avgFitness(offspring));
+            population = selection(selectionType);
+
+        }
+    }
+
+    private static void getTestSelection() throws FileNotFoundException {
         Scanner scanner = new Scanner(System.in);
         boolean inputValid = false;
 
@@ -88,7 +164,7 @@ public class SimpleGeneticAlgorithm {
             switch (selectedTestOption) {
                 case TEST_MUT:
                     System.out.println("Starting mutation rate variance test");
-                    runMutationVarienceTest();
+                    runMutationVarianceTest();
                     inputValid = true;
                     break;
                 case TEST_CRS:
@@ -112,8 +188,9 @@ public class SimpleGeneticAlgorithm {
         }
     }
 
-    private static void runMutationVarienceTest() throws FileNotFoundException {
-        initMutationsCSV("MutationRateVarienceResults.csv");
+    //START_TESTS
+    private static void runMutationVarianceTest() throws FileNotFoundException {
+        initMutationsCSV("MutationRateVarianceResults.csv");
 
         //Crossover probability = 100%
         currPc = CRS_RES - 1;
@@ -145,7 +222,7 @@ public class SimpleGeneticAlgorithm {
     }
 
     private static void runCrossoverRateVarianceTest() throws FileNotFoundException {
-        initCrossoversCSV("CrossoverRateVarienceResults.csv");
+        initCrossoversCSV("CrossoverRateVarianceResults.csv");
 
         for (int c = 0; c < CRS_RES; c++) {
             for (int r = 0; r < N_RUNS; r++) {
@@ -232,47 +309,7 @@ public class SimpleGeneticAlgorithm {
         System.out.println("Test complete");
         pw.close();
     }
-
-    private static void runSimpleGA(int selectionType) {
-        //SET each individuals genes to be 1 or 0 at random
-        for (int i = 0; i < population.length; i++) {
-            int[] genes = new int[CHROM_SIZE];
-
-            for (int j = 0; j < genes.length; j++) {
-                genes[j] = (int) ((Math.random() * 2) % 2);
-            }
-            population[i] = new Individual(genes);
-        }
-
-        for (int g = 0; g < N_GENS; g++) {
-            population = calcFitness(population);
-
-            //Check if global optimum has been reached
-            if (bestFitness(population) == 50 && reachGO == false) {
-                reachGO = true;
-                genToReachGO = g + 1;
-            }
-
-            //System.out.println("Parent pop best fitness = " + bestFitness(population));
-            offspring = crossover();
-            offspring = mutate();
-
-            offspring = calcFitness(offspring);
-
-            //System.out.println("Offspring pop avg fitness = " + avgFitness(offspring));
-            switch (selectionType) {
-                case SEL_TOUR:
-                    population = tournementSelection();
-                    break;
-                case SEL_ROUL:
-                    population = rouletteWheelSelection();
-                    break;
-                default:
-                    System.err.println("Selection type not found: " + selectionType);
-                    return;
-            }
-        }
-    }
+    //END_TESTS
 
     //START_CSV
     private static void initRunCSV(String name) throws FileNotFoundException {
@@ -282,7 +319,7 @@ public class SimpleGeneticAlgorithm {
         sb.append(String.valueOf(POP_SIZE));
         sb.append('\n');
         sb.append("Chromosome Size = ");
-        sb.append(String.valueOf(CHROM_SIZE));
+        sb.append(String.valueOf(chromSize));
         sb.append('\n');
         sb.append("No of Generations = ");
         sb.append(String.valueOf(N_GENS));
@@ -314,7 +351,7 @@ public class SimpleGeneticAlgorithm {
         sb.append(String.valueOf(POP_SIZE));
         sb.append('\n');
         sb.append("Chromosome Size = ");
-        sb.append(String.valueOf(CHROM_SIZE));
+        sb.append(String.valueOf(chromSize));
         sb.append('\n');
         sb.append("No of Generations = ");
         sb.append(String.valueOf(N_GENS));
@@ -345,7 +382,7 @@ public class SimpleGeneticAlgorithm {
         sb.append(String.valueOf(POP_SIZE));
         sb.append('\n');
         sb.append("Chromosome Size = ");
-        sb.append(String.valueOf(CHROM_SIZE));
+        sb.append(String.valueOf(chromSize));
         sb.append('\n');
         sb.append("No of Generations = ");
         sb.append(String.valueOf(N_GENS));
@@ -404,6 +441,18 @@ public class SimpleGeneticAlgorithm {
     //END_CSV
 
     //START_Selection
+    private static Individual[] selection(int selectionType) {
+        switch (selectionType) {
+            case SEL_TOUR:
+                return tournementSelection();
+            case SEL_ROUL:
+                return rouletteWheelSelection();
+            default:
+                System.err.println("Selection type not found: " + selectionType);
+                return null;
+        }
+    }
+
     private static Individual[] tournementSelection() {
         Individual[] nextGen = new Individual[POP_SIZE];
 
@@ -479,11 +528,11 @@ public class SimpleGeneticAlgorithm {
 
     private static ArrayList<Individual> singlePointCrossover(int[] parent1, int[] parent2) {
         ArrayList<Individual> children = new ArrayList<>();
-        int[][] crossoverGenes = new int[2][CHROM_SIZE];
+        int[][] crossoverGenes = new int[2][chromSize];
         int child1 = 0, child2 = 1;
-        int crossoverPoint = (int) (Math.random() * CHROM_SIZE) - 1;
+        int crossoverPoint = (int) (Math.random() * chromSize) - 1;
 
-        for (int i = 0; i < CHROM_SIZE; i++) {
+        for (int i = 0; i < chromSize; i++) {
             if (i < crossoverPoint) {
                 crossoverGenes[child1][i] = parent1[i];
             } else {
@@ -522,7 +571,7 @@ public class SimpleGeneticAlgorithm {
 
     private static int calcRandMutationRate() {
         int min = 1 / POP_SIZE;
-        int max = 1 / CHROM_SIZE;
+        int max = 1 / chromSize;
 
         if (min >= max) {
             throw new IllegalArgumentException(
@@ -535,7 +584,7 @@ public class SimpleGeneticAlgorithm {
         mutationRates = new double[MUT_RES];
 
         double min = (double) 1 / POP_SIZE;
-        double max = (double) 1 / CHROM_SIZE;
+        double max = (double) 1 / chromSize;
 
         if (min >= max) {
             throw new IllegalArgumentException(
@@ -553,7 +602,7 @@ public class SimpleGeneticAlgorithm {
     private static int[] mutateChromosome(int[] chrom) {
         int[] mutatedGenes = chrom;
 
-        for (int i = 0; i < CHROM_SIZE; i++) {
+        for (int i = 0; i < chromSize; i++) {
             double m = Math.random();
             if (mutationRates[currPm] > m) {
                 mutatedGenes[i] = invert(chrom[i]);
@@ -574,6 +623,20 @@ public class SimpleGeneticAlgorithm {
 
     //START_Fitness
     private static Individual[] calcFitness(Individual[] pop) {
+        switch(selectedTaskOption){
+            case TASK_COUNT_ONES:
+                return calcCountOnesFitness(pop);
+            case TASK_X_SQUARED:
+                return calcXSquaredFitness(pop);
+            case TASK_XY_FUNC:
+                return calcXYFuncFitness(pop);
+            default:
+                System.err.println("Task option not found: " + selectedTaskOption);
+                return null;
+        }
+    }
+
+    private static Individual[] calcCountOnesFitness(Individual[] pop){
         Individual[] newPop = new Individual[pop.length];
 
         for (int i = 0; i < pop.length; i++) {
@@ -588,7 +651,63 @@ public class SimpleGeneticAlgorithm {
         }
         return newPop;
     }
+    
+    private static Individual[] calcXSquaredFitness(Individual[] pop){
+        Individual[] newPop = new Individual[pop.length];
 
+        for (int i = 0; i < pop.length; i++) {
+            int fitness = 0;
+            int[] genes = pop[i].getChromosome();
+            for (int j = 0; j < genes.length; j++) {
+                if (genes[j] == 1) {
+                    fitness += Math.pow(2, j);
+                }
+            }
+            fitness = (int) Math.pow(fitness, 2);
+            newPop[i] = new Individual(genes, fitness);
+        }
+        return newPop;
+    }
+    
+    private static Individual[] calcXYFuncFitness(Individual[] pop){
+        Individual[] newPop = new Individual[pop.length];
+        
+        for (int i = 0; i < pop.length; i++) {
+            int fitness;
+            int[] genes = pop[i].getChromosome();
+            int x = 0, y = 0, exp = 0, fp;
+            
+            //GET X
+            fp = genes[0];
+            for (int j = 1; j < 5; j++) {
+                if(genes[j] == 1){
+                    x += Math.pow(2, exp);
+                }
+                exp++;
+            }
+            if(fp == 1){
+                x = (0 - x);
+            }
+            
+            //GET Y
+            exp = 0;
+            fp = genes[5];
+            for (int j = 6; j < 10; j++) {
+                if(genes[j] == 1){
+                    y += Math.pow(2, exp);
+                }
+                exp++;
+            }
+            if(fp == 1){
+                y = (0 - y);
+            }
+            
+            fitness = (int) (0.26*(Math.pow(x, 2) + Math.pow(y, 2)) - 0.48*x*y);
+            newPop[i] = new Individual(genes, fitness);
+        }
+        return newPop;
+    }
+    
     private static int avgFitness(Individual[] pop) {
         return sumFitness(pop) / pop.length;
     }
