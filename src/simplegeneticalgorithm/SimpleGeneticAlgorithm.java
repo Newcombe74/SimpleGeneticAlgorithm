@@ -18,14 +18,24 @@ import java.io.PrintWriter;
 public class SimpleGeneticAlgorithm {
 
     //Hyperparameters
-    private static final int POP_SIZE = 100,
+    private static final int POP_SIZE = 2000,
             CHROM_SIZE = 50,
             N_GENS = 50,
             N_RUNS = 10,
             MUT_RES = 101,
             CRS_RES = 100;
 
-    //Indexes 
+    //Test Option Indexes
+    private static final int TEST_MUT = 1,
+            TEST_CRS = 2,
+            TEST_TOUR = 3,
+            TEST_ROUL = 4;
+
+    //Selection Type Indexes
+    private static final int SEL_TOUR = 1,
+            SEL_ROUL = 2;
+
+    //Result Indexes 
     private static final int RES_BEST = 0,
             RES_AVG = 1,
             RES_SUM = 2,
@@ -50,6 +60,8 @@ public class SimpleGeneticAlgorithm {
 
     private static PrintWriter pw;
 
+    private static int selectedTestOption, percComplete = 10;
+
     /**
      * @param args the command line arguments
      * @throws java.io.FileNotFoundException
@@ -63,90 +75,166 @@ public class SimpleGeneticAlgorithm {
 
         Scanner scanner = new Scanner(System.in);
         boolean inputValid = false;
-        int option = 0, percComplete = 10;
 
         while (!inputValid) {
             System.out.println("Please enter the number of the test you wish to run:");
-            System.out.println("1. Mutation rate variance test");
-            System.out.println("2. Crossover rate variance test");
+            System.out.println(TEST_MUT + ". Mutation rate variance test");
+            System.out.println(TEST_CRS + ". Crossover rate variance test");
+            System.out.println(TEST_TOUR + ". Tournament selection test");
+            System.out.println(TEST_ROUL + ". Roulette-wheel selection test");
 
-            option = scanner.nextInt();
+            selectedTestOption = scanner.nextInt();
 
-            switch (option) {
-                case 1:
+            switch (selectedTestOption) {
+                case TEST_MUT:
                     System.out.println("Starting mutation rate variance test");
+                    runMutationVarienceTest();
                     inputValid = true;
                     break;
-                case 2:
+                case TEST_CRS:
                     System.out.println("Starting crossover rate variance test");
+                    runCrossoverRateVarianceTest();
+                    inputValid = true;
+                    break;
+                case TEST_TOUR:
+                    System.out.println("Starting tournament selection test");
+                    runTournamentSelectionTest();
+                    inputValid = true;
+                    break;
+                case TEST_ROUL:
+                    System.out.println("Starting roulette-wheel selection test");
+                    runRouletteWheelSelectionTest();
                     inputValid = true;
                     break;
                 default:
                     System.out.println("Input invalid");
             }
         }
-
-        if (option == 1) {
-            initMutationsCSV("MutationRates.csv");
-
-            currPc = CRS_RES - 1;
-
-            for (int m = 0; m < MUT_RES; m++) {
-                for (int r = 0; r < N_RUNS; r++) {
-                    reachGO = false;
-                    genToReachGO = N_GENS * 2;
-
-                    runGA();
-                    population = calcFitness(population);
-                    //writeRunResults(r + 1);
-                    runResults[RES_BEST][r] = bestFitness(population);
-                    runResults[RES_AVG][r] = avgFitness(population);
-                    runResults[RES_SUM][r] = sumFitness(population);
-                    runResults[RES_GEN_TO_GO][r] = genToReachGO;
-                }
-                writeResults(m + 1, mutationRates[m]);
-                currPm++;
-
-                if (calcPerc(m, MUT_RES) > percComplete) {
-                    System.out.println("Test " + percComplete + "% complete");
-                    percComplete += 10;
-                }
-            }
-
-            System.out.println("Test complete");
-            pw.close();
-        } else if (option == 2) {
-            initCrossoversCSV("CrossoverRates.csv");
-
-            for (int c = 0; c < CRS_RES; c++) {
-                for (int r = 0; r < N_RUNS; r++) {
-                    reachGO = false;
-                    genToReachGO = N_GENS * 2;
-
-                    runGA();
-                    population = calcFitness(population);
-                    //writeRunResults(r + 1);
-                    runResults[RES_BEST][r] = bestFitness(population);
-                    runResults[RES_AVG][r] = avgFitness(population);
-                    runResults[RES_SUM][r] = sumFitness(population);
-                    runResults[RES_GEN_TO_GO][r] = genToReachGO;
-                }
-                writeResults(c + 1, crossoverRates[c]);
-                currPc++;
-
-                if (calcPerc(c, 100) > percComplete) {
-                    System.out.println("Test " + percComplete + "% complete");
-                    percComplete += 10;
-                }
-            }
-
-            System.out.println("Test complete");
-            pw.close();
-        }
-
     }
 
-    private static void runGA() {
+    private static void runMutationVarienceTest() throws FileNotFoundException {
+        initMutationsCSV("MutationRateVarienceResults.csv");
+
+        //Crossover probability = 100%
+        currPc = CRS_RES - 1;
+
+        for (int m = 0; m < MUT_RES; m++) {
+            for (int r = 0; r < N_RUNS; r++) {
+                reachGO = false;
+                genToReachGO = N_GENS * 2;
+
+                runSimpleGA(SEL_TOUR);
+                population = calcFitness(population);
+                //writeRunResults(r + 1);
+                runResults[RES_BEST][r] = bestFitness(population);
+                runResults[RES_AVG][r] = avgFitness(population);
+                runResults[RES_SUM][r] = sumFitness(population);
+                runResults[RES_GEN_TO_GO][r] = genToReachGO;
+            }
+            writeResults(m + 1, mutationRates[m]);
+            currPm++;
+
+            if (calcPerc(m, MUT_RES) > percComplete) {
+                System.out.println("Test " + percComplete + "% complete");
+                percComplete += 10;
+            }
+        }
+
+        System.out.println("Test complete");
+        pw.close();
+    }
+
+    private static void runCrossoverRateVarianceTest() throws FileNotFoundException {
+        initCrossoversCSV("CrossoverRateVarienceResults.csv");
+
+        for (int c = 0; c < CRS_RES; c++) {
+            for (int r = 0; r < N_RUNS; r++) {
+                reachGO = false;
+                genToReachGO = N_GENS * 2;
+
+                runSimpleGA(SEL_TOUR);
+                population = calcFitness(population);
+                //writeRunResults(r + 1);
+                runResults[RES_BEST][r] = bestFitness(population);
+                runResults[RES_AVG][r] = avgFitness(population);
+                runResults[RES_SUM][r] = sumFitness(population);
+                runResults[RES_GEN_TO_GO][r] = genToReachGO;
+            }
+            writeResults(c + 1, crossoverRates[c]);
+            currPc++;
+
+            if (calcPerc(c, 100) > percComplete) {
+                System.out.println("Test " + percComplete + "% complete");
+                percComplete += 10;
+            }
+        }
+
+        System.out.println("Test complete");
+        pw.close();
+    }
+
+    private static void runTournamentSelectionTest() throws FileNotFoundException {
+        initRunCSV("TournementSelectionResults.csv");
+
+        //Crossover probability = 100%
+        currPc = CRS_RES - 1;
+
+        for (int r = 0; r < N_RUNS; r++) {
+            reachGO = false;
+            genToReachGO = N_GENS * 2;
+
+            runSimpleGA(SEL_TOUR);
+            population = calcFitness(population);
+            //writeRunResults(r + 1);
+            runResults[RES_BEST][r] = bestFitness(population);
+            runResults[RES_AVG][r] = avgFitness(population);
+            runResults[RES_SUM][r] = sumFitness(population);
+            runResults[RES_GEN_TO_GO][r] = genToReachGO;
+
+            writeRunResults(r + 1);
+
+            if (calcPerc(r, N_RUNS) > percComplete) {
+                System.out.println("Test " + percComplete + "% complete");
+                percComplete += 10;
+            }
+        }
+
+        System.out.println("Test complete");
+        pw.close();
+    }
+
+    private static void runRouletteWheelSelectionTest() throws FileNotFoundException {
+        initRunCSV("RouletteWheelSelectionResults.csv");
+
+        //Crossover probability = 100%
+        currPc = CRS_RES - 1;
+
+        for (int r = 0; r < N_RUNS; r++) {
+            reachGO = false;
+            genToReachGO = N_GENS * 2;
+
+            runSimpleGA(SEL_ROUL);
+            population = calcFitness(population);
+            //writeRunResults(r + 1);
+            runResults[RES_BEST][r] = bestFitness(population);
+            runResults[RES_AVG][r] = avgFitness(population);
+            runResults[RES_SUM][r] = sumFitness(population);
+            runResults[RES_GEN_TO_GO][r] = genToReachGO;
+
+            writeRunResults(r + 1);
+
+            if (calcPerc(r, N_RUNS) > percComplete) {
+                System.out.println("Test " + percComplete + "% complete");
+                percComplete += 10;
+            }
+        }
+
+        System.out.println("Test complete");
+        pw.close();
+    }
+
+    private static void runSimpleGA(int selectionType) {
+        //SET each individuals genes to be 1 or 0 at random
         for (int i = 0; i < population.length; i++) {
             int[] genes = new int[CHROM_SIZE];
 
@@ -159,6 +247,7 @@ public class SimpleGeneticAlgorithm {
         for (int g = 0; g < N_GENS; g++) {
             population = calcFitness(population);
 
+            //Check if global optimum has been reached
             if (bestFitness(population) == 50 && reachGO == false) {
                 reachGO = true;
                 genToReachGO = g + 1;
@@ -171,7 +260,17 @@ public class SimpleGeneticAlgorithm {
             offspring = calcFitness(offspring);
 
             //System.out.println("Offspring pop avg fitness = " + avgFitness(offspring));
-            population = selectNewPopulation();
+            switch (selectionType) {
+                case SEL_TOUR:
+                    population = tournementSelection();
+                    break;
+                case SEL_ROUL:
+                    population = rouletteWheelSelection();
+                    break;
+                default:
+                    System.err.println("Selection type not found: " + selectionType);
+                    return;
+            }
         }
     }
 
@@ -179,6 +278,22 @@ public class SimpleGeneticAlgorithm {
     private static void initRunCSV(String name) throws FileNotFoundException {
         pw = new PrintWriter(new File(name));
         StringBuilder sb = new StringBuilder();
+        sb.append("Population Size = ");
+        sb.append(String.valueOf(POP_SIZE));
+        sb.append('\n');
+        sb.append("Chromosome Size = ");
+        sb.append(String.valueOf(CHROM_SIZE));
+        sb.append('\n');
+        sb.append("No of Generations = ");
+        sb.append(String.valueOf(N_GENS));
+        sb.append('\n');
+        sb.append("Mutation Rate = ");
+        sb.append(mutationRates[currPm]);
+        sb.append('\n');
+        sb.append("Crossover Rate = ");
+        sb.append(crossoverRates[currPc]);
+        sb.append('\n');
+        sb.append('\n');
         sb.append("RunId");
         sb.append(',');
         sb.append("Best Fitness");
@@ -186,6 +301,8 @@ public class SimpleGeneticAlgorithm {
         sb.append("Avg Fitness");
         sb.append(',');
         sb.append("Total Fitness");
+        sb.append(',');
+        sb.append("First Gen to Reach GO");
         sb.append('\n');
         pw.write(sb.toString());
     }
@@ -261,6 +378,8 @@ public class SimpleGeneticAlgorithm {
         sb.append(avgFitness(population));
         sb.append(',');
         sb.append(sumFitness(population));
+        sb.append(',');
+        sb.append(genToReachGO);
         sb.append('\n');
         pw.write(sb.toString());
 
@@ -285,7 +404,7 @@ public class SimpleGeneticAlgorithm {
     //END_CSV
 
     //START_Selection
-    private static Individual[] selectNewPopulation() {
+    private static Individual[] tournementSelection() {
         Individual[] nextGen = new Individual[POP_SIZE];
 
         if (offspring.length > 0) {
@@ -305,9 +424,40 @@ public class SimpleGeneticAlgorithm {
             return population;
         }
     }
+
+    private static Individual[] rouletteWheelSelection() {
+        Individual[] nextGen = new Individual[POP_SIZE];
+
+        //Put parents and children into a single population
+        Individual[] currentGen = new Individual[population.length + offspring.length];
+        int n = 0;
+        for (Individual inividual : population) {
+            currentGen[n] = inividual;
+            n++;
+        }
+        for (Individual inividual : offspring) {
+            currentGen[n] = inividual;
+            n++;
+        }
+
+        int totalFitness = sumFitness(currentGen);
+        for (int i = 0; i < POP_SIZE; i++) {
+            int runningTotal = 0, j = 0;
+
+            int selectionPoint = (int) ((Math.random() * totalFitness) % totalFitness);
+
+            while (runningTotal <= selectionPoint) {
+                runningTotal += currentGen[j].getFitness();
+                j++;
+            }
+            nextGen[i] = currentGen[j - 1];
+        }
+
+        return nextGen;
+    }
     //END_Selection
 
-    //START_Crossover
+//START_Crossover
     private static Individual[] crossover() {
         ArrayList<Individual> children = new ArrayList<>();
 
@@ -424,19 +574,19 @@ public class SimpleGeneticAlgorithm {
 
     //START_Fitness
     private static Individual[] calcFitness(Individual[] pop) {
-        for (Individual individual : pop) {
-            individual.setFitness(0);
-        }
+        Individual[] newPop = new Individual[pop.length];
 
-        for (Individual individual : pop) {
-            int[] genes = individual.getChromosome();
+        for (int i = 0; i < pop.length; i++) {
+            int fitness = 0;
+            int[] genes = pop[i].getChromosome();
             for (int j = 0; j < genes.length; j++) {
                 if (genes[j] == 1) {
-                    individual.incFitness();
+                    fitness++;
                 }
             }
+            newPop[i] = new Individual(genes, fitness);
         }
-        return pop;
+        return newPop;
     }
 
     private static int avgFitness(Individual[] pop) {
